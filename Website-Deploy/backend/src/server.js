@@ -18,14 +18,11 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "")
 
 const corsOptions = {
   origin: (origin, cb) => {
-    // allow Postman/Insomnia or server-to-server
-    if (!origin) return cb(null, true);
+    if (!origin) return cb(null, true); // Insomnia/Postman
 
-    // if env not set yet, allow all (debugging)
-    if (allowedOrigins.length === 0) return cb(null, true);
+    if (allowedOrigins.length === 0) return cb(null, true); // debug mode
 
     if (allowedOrigins.includes(origin)) return cb(null, true);
-
     return cb(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,
@@ -33,24 +30,23 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-// IMPORTANT: must be before routes
+// Must be BEFORE routes
 app.use(cors(corsOptions));
-// IMPORTANT: respond to preflight for ALL routes
-app.options("*", cors(corsOptions));
+
+// ✅ Preflight for all routes (FIXED)
+app.options(/.*/, cors(corsOptions));
 
 // ---------- Parsers ----------
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // ---------- Routes ----------
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
-});
+app.get("/api/health", (req, res) => res.status(200).json({ status: "ok" }));
 
-// Your join URL must be: /api/rooms/join
+// Your join endpoint should be: /api/rooms/join
 app.use("/api/rooms", roomRoutes);
 
-// ---------- 404 handler (helps find wrong path like /rooms/join) ----------
+// ---------- 404 ----------
 app.use((req, res) => {
   res.status(404).json({
     error: "Not Found",
@@ -62,20 +58,13 @@ app.use((req, res) => {
 // ---------- Error handler ----------
 app.use((err, req, res, next) => {
   console.error("❌ API Error:", err?.message || err);
-  res.status(500).json({
-    error: "Internal Server Error",
-    message: err?.message || String(err),
-  });
+  res.status(500).json({ error: "Internal Server Error", message: err?.message || String(err) });
 });
 
 async function start() {
   try {
     await connectDB();
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ Server listening on port ${PORT}`);
-      console.log(`✅ Health: /api/health`);
-      console.log(`✅ Rooms:  /api/rooms/*`);
-    });
+    app.listen(PORT, "0.0.0.0", () => console.log(`✅ Server listening on port ${PORT}`));
   } catch (err) {
     console.error("❌ Failed to start server:", err?.message || err);
     process.exit(1);
