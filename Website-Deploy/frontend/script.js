@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const API_BASE =
   (location.hostname === "localhost" || location.hostname === "127.0.0.1")
     ? "http://localhost:3222"
-    : "https://carddealer-backend.onrender.com";
+    : "https://carddealerrobot.onrender.com";
 
   // ======= JOIN SCREEN LOGIC =======
 
