@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentIndex = 0; // next slot index to fill (0..3)
   let locked = false;   // lock code input after 4 symbols
 
-  const API_BASE = "http://localhost:3222/api";
+  const API_BASE = "https://carddealerrobot.onrender.com";
 
   // ======= JOIN SCREEN LOGIC =======
 
