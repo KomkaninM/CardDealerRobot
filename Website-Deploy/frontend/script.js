@@ -326,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function joinRoomOnServer(roomCode) {
     try {
-      const res = await fetch(`${API_BASE}/rooms/join`, {
+      const res = await fetch(`${API_BASE}/api/rooms/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomCode }),
@@ -362,7 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return null;
     }
 
-    let url = `${API_BASE}/rooms/${action}`;
+    let url = `${API_BASE}/api/rooms/${action}`;
     let body = { roomCode };
 
     if (action === "start") {
