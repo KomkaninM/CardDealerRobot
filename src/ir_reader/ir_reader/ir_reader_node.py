@@ -8,122 +8,82 @@ IR Reader Node
     /ir_reader/player_angle     (std_msgs/Float32)
 """
 
-import math
 import rclpy
 from rclpy.node import Node
+from std_msgs.msg import Bool, String
 
-from std_msgs.msg import Bool
-from std_msgs.msg import Float32
-from nav_msgs.msg import Odometry
-
-# ===== GPIO =====
 try:
     import RPi.GPIO as GPIO
-    GPIO_AVAILABLE = True
+    GPIO_OK = True
 except Exception:
-    GPIO_AVAILABLE = False
-
-
-def quaternion_to_yaw(x, y, z, w) -> float:
-    """Convert quaternion to yaw (rad)"""
-    siny_cosp = 2.0 * (w * z + x * y)
-    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-    return math.atan2(siny_cosp, cosy_cosp)
+    GPIO_OK = False
 
 
 class IRReaderNode(Node):
     def __init__(self):
         super().__init__('ir_reader_node')
 
-        # ---------- Parameters ----------
+        # Parameters
         self.declare_parameter('ir_gpio_bcm', 17)
         self.declare_parameter('active_low', True)
-        self.declare_parameter('rate_hz', 10.0)
+        self.declare_parameter('rate_hz', 20.0)
+        self.declare_parameter('also_publish_lcd', True)
 
         self.ir_gpio = int(self.get_parameter('ir_gpio_bcm').value)
         self.active_low = bool(self.get_parameter('active_low').value)
         self.rate_hz = float(self.get_parameter('rate_hz').value)
+        self.also_publish_lcd = bool(self.get_parameter('also_publish_lcd').value)
 
-        # ---------- Internal state ----------
-        self.current_yaw = 0.0
-        self.last_detected = None
+        self.last_state = None
 
-        # ---------- ROS interfaces ----------
-        self.create_subscription(
-            Odometry,
-            '/odom',
-            self.odom_callback,
-            10
-        )
+        # Publishers
+        self.pub_det = self.create_publisher(Bool, '/ir_reader/player_detection', 10)
+        self.pub_lcd = self.create_publisher(String, '/lcd/display', 10)
 
-        self.pub_detect = self.create_publisher(
-            Bool,
-            '/ir_reader/player_detection',
-            10
-        )
+        # GPIO init
+        if not GPIO_OK:
+            self.get_logger().warning("RPi.GPIO not available")
+            return
 
-        self.pub_angle = self.create_publisher(
-            Float32,
-            '/ir_reader/player_angle',
-            10
-        )
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.ir_gpio, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-        # ---------- GPIO setup ----------
-        if GPIO_AVAILABLE:
-            GPIO.setwarnings(False)
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(
-                self.ir_gpio,
-                GPIO.IN,
-                pull_up_down=GPIO.PUD_UP   # เหมาะกับ IR active-low
-            )
-        else:
-            self.get_logger().warning(
-                'RPi.GPIO not available (not running on Raspberry Pi?)'
-            )
-
-        # ---------- Timer ----------
         period = 1.0 / max(self.rate_hz, 1.0)
-        self.create_timer(period, self.timer_callback)
+        self.create_timer(period, self.tick)
 
         self.get_logger().info(
-            f'IR Reader started | GPIO={self.ir_gpio} | active_low={self.active_low}'
+            f"IR Reader started | GPIO={self.ir_gpio} | active_low={self.active_low}"
         )
 
-    def odom_callback(self, msg: Odometry):
-        q = msg.pose.pose.orientation
-        self.current_yaw = quaternion_to_yaw(q.x, q.y, q.z, q.w)
-
-    def read_ir(self) -> bool:
-        """Return True if IR detected"""
-        if not GPIO_AVAILABLE:
-            return False
-
-        raw = GPIO.input(self.ir_gpio)  # 0 or 1
+    def read_detected(self) -> bool:
+        raw = GPIO.input(self.ir_gpio)  # 0/1
         return (raw == 0) if self.active_low else (raw == 1)
 
-    def timer_callback(self):
-        detected = self.read_ir()
+    def tick(self):
+        if not GPIO_OK:
+            return
 
-        # publish only when state changes
-        if detected != self.last_detected:
-            self.last_detected = detected
+        detected = self.read_detected()
 
-            msg_detect = Bool()
-            msg_detect.data = detected
-            self.pub_detect.publish(msg_detect)
+        # publish only on change
+        if detected != self.last_state:
+            self.last_state = detected
 
-            msg_angle = Float32()
-            msg_angle.data = float(self.current_yaw)
-            self.pub_angle.publish(msg_angle)
+            msg = Bool()
+            msg.data = detected
+            self.pub_det.publish(msg)
 
-            self.get_logger().info(
-                f'IR {"Detected" if detected else "Not Detected"} | '
-                f'yaw={self.current_yaw:.3f} rad'
-            )
+            text = "Detected" if detected else "Not Detected"
+            self.get_logger().info(f"IR {text}")
+
+            if self.also_publish_lcd:
+                lcd = String()
+                lcd.data = f"IR STATUS|{text}"
+                self.pub_lcd.publish(lcd)
 
     def destroy_node(self):
-        if GPIO_AVAILABLE:
+        if GPIO_OK:
             try:
                 GPIO.cleanup()
             except Exception:
@@ -145,3 +105,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
