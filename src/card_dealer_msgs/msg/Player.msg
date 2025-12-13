@@ -1,3 +1,5 @@
+# File: src/card_dealer_msgs/msg/Player.msg
+
 string name
 bool skipped
-uint8 order
+int32 order

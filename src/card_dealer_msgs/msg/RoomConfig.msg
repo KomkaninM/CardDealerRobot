@@ -1,7 +1,11 @@
+# File: src/card_dealer_msgs/msg/RoomConfig.msg
+
 string room_code
 string room_status
-Player[] players
 string timestamp
-uint8 num_players
-uint8 card_gain
-uint8 starting_card
+int32 num_players
+int32 card_gain
+int32 starting_card
+
+# This refers to the Player.msg defined above
+Player[] players
