@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""
-IR Reader Node
-- Read IR sensor via GPIO (BCM17)
-- Subscribe /odom
-- Publish:
-    /ir_reader/player_detection (std_msgs/Bool)
-    /ir_reader/player_angle     (std_msgs/Float32)
-"""
-
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
@@ -105,5 +96,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
