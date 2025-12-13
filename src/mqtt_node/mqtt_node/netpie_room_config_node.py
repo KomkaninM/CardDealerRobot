@@ -14,13 +14,24 @@ class NetpieRoomConfigNode(Node):
     def __init__(self):
         super().__init__("netpie_room_config_node")
 
-        # Load .env (อยู่ที่โฟลเดอร์ package root: mqtt_bridge/.env)
-        # แนะนำรันจาก workspace ก็ยังอ่านได้เพราะเรา resolve path แบบง่าย:
-        load_dotenv()
+        self.declare_parameter("env_file", "")
+        env_file = self.get_parameter("env_file").get_parameter_value().string_value
 
-        app_id = os.getenv("NETPIE_APP_ID", "")
-        key = os.getenv("NETPIE_KEY", "")
-        secret = os.getenv("NETPIE_SECRET", "")
+        # ✅ โหลด .env จาก path ที่ส่งมา (ถ้าไม่ส่งมา จะลองหา .env ใน current folder)
+        if env_file:
+            load_dotenv(dotenv_path=env_file)
+            self.get_logger().info(f"Loaded .env from: {env_file}")
+        else:
+            default_env = str(Path.cwd() / ".env")
+            load_dotenv(dotenv_path=default_env)
+            self.get_logger().info(f"Loaded .env from: {default_env}")
+
+        # Load .env
+        # แนะนำรันจาก workspace ก็ยังอ่านได้เพราะเรา resolve path แบบง่าย:
+        load_dotenv() 
+        app_id = os.getenv("NETPIE_APP_ID", "7358e1d0-7540-46d5-9abb-493964af4be1")
+        key = os.getenv("NETPIE_KEY", "i5SSesdfdWTBXWhxmnMrNwiLF2DXmKJj")
+        secret = os.getenv("NETPIE_SECRET", "LiPXd6n8UnhPfZrTQg9cx8TEch1SPHzG")
         host = os.getenv("NETPIE_HOST", "mqtt.netpie.io")
         port = int(os.getenv("NETPIE_PORT", "1883"))
         room_id = os.getenv("ROOM_ID", "101")
