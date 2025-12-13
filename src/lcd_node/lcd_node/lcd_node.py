@@ -15,66 +15,149 @@ def fit16(text: str) -> str:
     return (text[:16]).ljust(16)
 
 
-# =========================
-# Arduino bitmaps (ของคุณ)
-# =========================
-name1x10 = [0b11111,0b11110,0b10000,0b10000,0b10000,0b10000,0b11111,0b11111]
+def load_card_symbols(lcd):
+    # 8 custom chars: 0..7
+    chars = {
+        # ♠ (spade)
+        0: [
+            0b00100,
+            0b01110,
+            0b11111,
+            0b11111,
+            0b01110,
+            0b00100,
+            0b00100,
+            0b01110,
+        ],
+        # ♥ (heart)
+        1: [
+            0b00000,
+            0b01010,
+            0b11111,
+            0b11111,
+            0b11111,
+            0b01110,
+            0b00100,
+            0b00000,
+        ],
+        # ♦ (diamond)
+        2: [
+            0b00100,
+            0b01110,
+            0b11111,
+            0b11111,
+            0b11111,
+            0b01110,
+            0b00100,
+            0b00000,
+        ],
+        # ♣ (club)
+        3: [
+            0b00100,
+            0b01110,
+            0b00100,
+            0b11111,
+            0b11111,
+            0b01110,
+            0b00100,
+            0b01110,
+        ],
+        # ♤ (outline spade)
+        4: [
+            0b00100,
+            0b01110,
+            0b10001,
+            0b10001,
+            0b01010,
+            0b00100,
+            0b00100,
+            0b01110,
+        ],
+        # ♧ (outline club)
+        5: [
+            0b00100,
+            0b01010,
+            0b00100,
+            0b10001,
+            0b10001,
+            0b01010,
+            0b00100,
+            0b01110,
+        ],
+        # ♡ (outline heart)
+        6: [
+            0b00000,
+            0b01010,
+            0b10001,
+            0b10001,
+            0b10001,
+            0b01010,
+            0b00100,
+            0b00000,
+        ],
+        # ♢ (outline diamond)
+        7: [
+            0b00100,
+            0b01010,
+            0b10001,
+            0b10001,
+            0b10001,
+            0b01010,
+            0b00100,
+            0b00000,
+        ],
+    }
 
-name0x0  = [0b00110,0b01111,0b11111,0b11111,0b11111,0b11111,0b11111,0b11111]
-name0x1  = [0b01100,0b11110,0b11111,0b11111,0b11111,0b11111,0b11111,0b11111]
-
-name0x3  = [0b00001,0b00011,0b00011,0b00111,0b00111,0b01111,0b01111,0b11111]
-name0x4  = [0b10000,0b11000,0b11000,0b11100,0b11100,0b11110,0b11110,0b11111]
-
-name0x6  = [0b00001,0b00011,0b00111,0b01111,0b01111,0b11111,0b11111,0b11111]
-name0x7  = [0b10000,0b11000,0b11100,0b11110,0b11110,0b11111,0b11111,0b11111]
-
-name0x9  = [0b00001,0b00011,0b00111,0b00111,0b00011,0b00001,0b01110,0b11111]
-name0x10 = [0b10000,0b11000,0b11100,0b11100,0b11000,0b10000,0b01110,0b11111]
-
-name1x0  = [0b01111,0b01111,0b00111,0b00111,0b00011,0b00011,0b00001,0b00001]
-name1x1  = [0b11110,0b11110,0b11100,0b11100,0b11000,0b11000,0b10000,0b10000]
-
-name1x3  = [0b11111,0b01111,0b01111,0b00111,0b00111,0b00011,0b00011,0b00001]
-name1x4  = [0b11111,0b11110,0b11110,0b11100,0b11100,0b11000,0b11000,0b10000]
-
-name1x6  = [0b11111,0b01111,0b00111,0b00011,0b00001,0b00001,0b11111,0b11111]
-name1x7  = [0b11111,0b11110,0b11100,0b11000,0b10000,0b10000,0b11111,0b11111]
-
-name1x9  = [0b11111,0b01111,0b00001,0b00001,0b00001,0b00001,0b11111,0b11111]
+    for idx, bitmap in chars.items():
+        lcd.create_char(idx, bitmap)
 
 
-# =========================
-# สร้าง 2x2 tiles ต่อ 1 รูปใหญ่
-#   tiles = [TL, TR, BL, BR]
-# =========================
-HEART_TILES   = [name0x0,  name0x1,  name1x0,  name1x1]
-DIAMOND_TILES = [name0x3,  name0x4,  name1x3,  name1x4]
-SPADE_TILES   = [name0x6,  name0x7,  name1x6,  name1x7]
-CLUB_TILES    = [name0x9,  name0x10, name1x9,  name1x10]
+# token -> custom char index
+TOKEN_MAP = {
+    "s/": 0,  # spade filled
+    "h/": 1,  # heart filled
+    "d/": 2,  # diamond filled
+    "c/": 3,  # club filled
+    "S/": 4,  # spade outline
+    "C/": 5,  # club outline
+    "H/": 6,  # heart outline
+    "D/": 7,  # diamond outline
+}
 
 
-def draw_two_big_cards(lcd, left_tiles, right_tiles, left_col=0, right_col=4):
+def render_lcd(text: str) -> str:
     """
-    โหลด custom char 0..7 สำหรับ 2 ใบ (2x2 + 2x2 = 8 tiles) แล้ววาดเต็ม 2 แถว
-    left_col/right_col คือคอลัมน์เริ่มของใบซ้าย/ขวา
+    แปลง token เช่น h/ -> chr(1) เพื่อให้ LCD แสดง custom char
+    Escape:
+      - '//' -> '/'
     """
-    # โหลดเข้า CGRAM 0..7
-    tiles = left_tiles + right_tiles  # 8 tiles
-    for i, tile in enumerate(tiles):
-        lcd.create_char(i, tile)
+    if not text:
+        return ""
 
-    # ใบซ้าย (0,1 / 2,3)
-    lcd.cursor_pos = (0, left_col)
-    lcd.write_string(chr(0) + chr(1))
-    lcd.cursor_pos = (1, left_col)
-    lcd.write_string(chr(2) + chr(3))
+    out = []
+    i = 0
+    n = len(text)
 
-    # ใบขวา (4,5 / 6,7)
-    lcd.cursor_pos = (0, right_col)
-    lcd.write_string(chr(4) + chr(5))
-    lcd.cursor_pos = (1, right_col)
-    lcd.write_string(chr(6) + chr(7))
+    while i < n:
+        # escape: '//' -> '/'
+        if i + 1 < n and text[i] == "/" and text[i + 1] == "/":
+            out.append("/")
+            i += 2
+            continue
+
+        # token: 2 chars, เช่น 'h/' 's/' ...
+        if i + 1 < n:
+            tok = text[i:i + 2]
+            idx = TOKEN_MAP.get(tok)
+            if idx is not None:
+                out.append(chr(idx))
+                i += 2
+                continue
+
+        out.append(text[i])
+        i += 1
+
+    return "".join(out)
 
 
 class LCDNode(Node):
@@ -83,21 +166,21 @@ class LCDNode(Node):
 
         # GPIO mapping (BCM)
         self.pin_rs = 26
-        self.pin_e  = 19
+        self.pin_e = 19
         self.pins_data = [13, 6, 5, 11]  # D4 D5 D6 D7
 
         self.lcd = None
-        self.gpio_inited = False
+        self.lcd_ready = False
 
-        # page 0 = ♥♦, page 1 = ♠♣
-        self.page = 0
-        self.flip_sec = 1.5
+        # line buffers
+        self.line1 = ""
+        self.line2 = ""
+        self.last_line1 = None
+        self.last_line2 = None
 
-        # ถ้าจะใช้ข้อความจาก topic ด้วย: ส่ง MODE:TEXT / MODE:CARDS
-        self.page_mode = True
-        self.last_msg = ""
-
-        self.create_subscription(String, '/lcd/display', self.cb_display, 10)
+        # Subscribe two topics: lcd1 -> row0, lcd2 -> row1
+        self.create_subscription(String, '/lcd1', self.cb_lcd1, 10)
+        self.create_subscription(String, '/lcd2', self.cb_lcd2, 10)
 
         if not LCD_OK:
             self.get_logger().warning("LCD library not available")
@@ -105,7 +188,6 @@ class LCDNode(Node):
 
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
-        self.gpio_inited = True
 
         self.lcd = CharLCD(
             numbering_mode=GPIO.BCM,
@@ -115,97 +197,55 @@ class LCDNode(Node):
             cols=16,
             rows=2
         )
+        self.lcd_ready = True
 
-        self.get_logger().info("LCD node started")
+        # Load custom symbols
+        load_card_symbols(self.lcd)
 
-        # เริ่มหน้า ♥♦
-        self.draw_page(0)
-
-        # timer สลับหน้า
-        self.flip_timer = self.create_timer(self.flip_sec, self.flip_page)
-
-    def draw_page(self, page: int):
-        if not self.lcd:
-            return
+        # Clear and show a short ready screen (optional)
         self.lcd.clear()
+        self._write_line(0, "LCD READY")
+        self._write_line(1, "pub /lcd1,/2")
 
-        # ปรับตำแหน่งให้ “เต็มจอ” ได้ที่นี่
-        # ถ้าอยากให้ไพ่ชิดซ้าย/ขวากว่านี้ เปลี่ยน right_col เป็น 5 หรือ 6
-        left_col = 0
-        right_col = 4
+        self.get_logger().info("LCD Node started (topics: /lcd1, /lcd2)")
 
-        if page == 0:
-            # ♥ ♦
-            draw_two_big_cards(self.lcd, HEART_TILES, DIAMOND_TILES, left_col, right_col)
-        else:
-            # ♠ ♣
-            draw_two_big_cards(self.lcd, SPADE_TILES, CLUB_TILES, left_col, right_col)
-
-    def flip_page(self):
-        if not self.lcd or not self.page_mode:
+    def _write_line(self, row: int, text: str):
+        if not self.lcd_ready or self.lcd is None:
             return
-        self.page = 1 - self.page
-        try:
-            self.draw_page(self.page)
-        except Exception as e:
-            self.get_logger().warning(f"Flip page failed: {e}")
+        text = fit16(render_lcd(text))
+        self.lcd.cursor_pos = (row, 0)
+        self.lcd.write_string(text)
 
-    def cb_display(self, msg: String):
-        if not self.lcd:
-            return
+    def _refresh(self):
+        # update only changed lines to reduce flicker
+        if self.line1 != self.last_line1:
+            self._write_line(0, self.line1)
+            self.last_line1 = self.line1
+        if self.line2 != self.last_line2:
+            self._write_line(1, self.line2)
+            self.last_line2 = self.line2
 
-        text = (msg.data or "").strip()
-        if text == self.last_msg:
-            return
-        self.last_msg = text
+    def cb_lcd1(self, msg: String):
+        self.line1 = (msg.data or "").strip()
+        self.get_logger().info(f"LCD1 <- {self.line1}")
+        self._refresh()
 
-        # คุมโหมด
-        if text.upper() == "MODE:CARDS":
-            self.page_mode = True
-            self.page = 0
-            self.draw_page(0)
-            self.get_logger().info("Switched to CARDS mode")
-            return
-
-        if text.upper() == "MODE:TEXT":
-            self.page_mode = False
-            self.lcd.clear()
-            self.get_logger().info("Switched to TEXT mode")
-            return
-
-        # ถ้าอยู่โหมดไพ่ใหญ่ ไม่ให้ข้อความมาทับ
-        if self.page_mode:
-            return
-
-        # โหมดข้อความ
-        if "|" in text:
-            line1, line2 = text.split("|", 1)
-        else:
-            line1, line2 = text, ""
-
-        line1 = fit16(line1)
-        line2 = fit16(line2)
-
-        self.lcd.clear()
-        self.lcd.cursor_pos = (0, 0)
-        self.lcd.write_string(line1)
-        self.lcd.cursor_pos = (1, 0)
-        self.lcd.write_string(line2)
+    def cb_lcd2(self, msg: String):
+        self.line2 = (msg.data or "").strip()
+        self.get_logger().info(f"LCD2 <- {self.line2}")
+        self._refresh()
 
     def destroy_node(self):
-        try:
-            if self.lcd:
+        if self.lcd_ready and self.lcd is not None:
+            try:
                 self.lcd.clear()
                 self.lcd.close(clear=True)
-        except Exception:
-            pass
-
-        try:
-            if self.gpio_inited:
+            except Exception:
+                pass
+            try:
                 GPIO.cleanup()
-        except Exception:
-            pass
-
+            except Exception:
+                pass
         super().destroy_node()
 
 
@@ -217,14 +257,8 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        try:
-            node.destroy_node()
-        except Exception:
-            pass
-        try:
-            rclpy.shutdown()
-        except Exception:
-            pass
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
