@@ -42,27 +42,41 @@ This step configures and verifies that your Turtlebot3 is connected and working 
   export TURTLEBOT3_MODEL=burger
   ros2 run turtlebot3_teleop teleop_keyboard
 ```
+## How to Build
+1. **Install Source Code**
+```bash
+  cd <ROS2_workspace>/src
+  git clone https://github.com/KomkaninM/CardDealerRobot.git
+  ros2 run turtlebot3_teleop teleop_keyboard
+```
+2. Build
+```bash
+  cd <ROS2_workspace>
+  colcon build --symlink-install
+  source install/setup.bash
+```
 
 ## Github Pull & Update
 
 1. **Create the Repo temporary Folder**
  ```bash
-    cd <git-folder>
+    cd ~/github_upload/CardDealerRobot
     git pull
  ```
-1. **copy your code to Git Folder**
+2. **copy your code to Git Folder**
 ```bash
     cp -r /home/ubuntu-me-2/<your_workspace>/src/* src/
  ```
-1. **Stage, Commit and Push**
+3. **Stage, Commit and Push**
 ```bash
     git add .
     git commit -m "<Your Commit Message>"
     git push origin main
  ```
- 1. **When it asks for Username**
+ 4. **When it asks for Username**
 See the github access token by
 ```bash
-    cat git_token.txt
+    cat github_keys.txt
  ```
-When it asks for your Username, enter GitHub username : KomkaninM. When it asks for your Password, paste the Personal Access Token in that .txt file
+When it asks for your Username, enter GitHub username : KomkaninM. When it asks for your Password, paste the Personal Access Token in github_keys.txt file
+
