@@ -53,10 +53,15 @@ This step configures and verifies that your Turtlebot3 is connected and working 
   colcon build --symlink-install
   source install/setup.bash
 ```
-3. Run
+3. Setup .env file (use template from .env.example)
+```bash
+  nano .env
+```
+4. Run
 ```bash
   ros2 launch launcher dealer_system_launch.py
 ```
+
 
 ## Github Pull & Update
 
