@@ -127,8 +127,8 @@ class LCDNode(Node):
 
         # Clear and show a short ready screen
         self.lcd.clear()
-        self._write_line(0, "LCD READY")
-        self._write_line(1, "Auto-Center Mode")
+        self._write_line(0, "PRESS TO")
+        self._write_line(1, "START")
 
         self.get_logger().info("LCD Node Initialize")
         self.get_logger().info("Subscribed to: /lcd/display/line1, /lcd/display/line2")

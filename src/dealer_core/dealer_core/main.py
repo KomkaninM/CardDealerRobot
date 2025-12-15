@@ -127,7 +127,7 @@ class CardDealerCoreNode(Node):
         
         self.players_data = [] 
         
-        # [UPDATED] Map Name (String) to Angle (Float) instead of Order (Int)
+        # Map Name (String) to Angle (Float) instead of Order (Int)
         self.player_angle_map: Dict[str, float] = {}
 
         # Odom tracking
@@ -157,6 +157,12 @@ class CardDealerCoreNode(Node):
 
         # --- Loop --- #
         self.timer = self.create_timer(0.1, self.state_machine_step)
+        
+        # Log active topics at startup
+        self.get_logger().info(
+            "Published to /dealer/state, /dealer/event, /lcd/display/line1, "
+            "/lcd/display/line2, /core/card_left, /rotator/angle, /cmd_vel, /card_spreader/cmd"
+        )
 
 
     # ====== CALLBACKS ==============================================
@@ -178,6 +184,9 @@ class CardDealerCoreNode(Node):
             self.is_button_pressed = True
     
     def room_config_callback(self, msg: RoomConfig):
+        # We allow room_config to update even if room_code is different if we are IDLE, 
+        # but usually we filter by room code. 
+        # For reset logic, we just check self.room_status in the loop.
         if msg.room_code != self.room_code: return
         
         self.room_code = msg.room_code
@@ -193,6 +202,7 @@ class CardDealerCoreNode(Node):
                 "order": p.order, 
                 "skipped": p.skipped
             })
+	if self.room_status = "finished" : self.STATE = DealerState.IDLE
 
     def ir_angle_callback(self, msg: Float32):
         if self.state == DealerState.CALIBRATING_PLAYERS:
@@ -238,7 +248,7 @@ class CardDealerCoreNode(Node):
             name = sorted_players[i]['name'] # Key is Name, not Order
             angle = final_angles[i]
             
-            # [UPDATED] Store by Name
+            # Store by Name
             self.player_angle_map[name] = angle
             self.get_logger().info(f"  {name} -> {angle:.2f} deg")
         return True
@@ -339,7 +349,8 @@ class CardDealerCoreNode(Node):
         elif self.state == DealerState.WAIT_CONFIG:
             if self.room_status == "running":
                 self.state = DealerState.CALIBRATING_PLAYERS
-            elif self.room_status == "cancelled":
+            # [UPDATED] Check for finished/cancelled to reset
+            elif self.room_status == "cancelled" or self.room_status == "finished":
                 self.state = DealerState.IDLE
 
         # --- CALIBRATION ---
@@ -389,7 +400,7 @@ class CardDealerCoreNode(Node):
             p_data = self.deal_player_order_list[self.current_deal_idx]
             current_name = p_data['name']
             
-            # [UPDATED] Lookup by NAME
+            # Lookup by NAME
             target_deg = self.player_angle_map.get(current_name)
             
             if target_deg is None:
@@ -432,6 +443,16 @@ class CardDealerCoreNode(Node):
 
         # --- [ACTIVE] DEALING ROUND ---
         elif self.state == DealerState.DEALING_ROUND:
+            
+            # [ADDED] Check if Game is Finished
+            if self.room_status == "finished":
+                self.stop_robot()
+                self.publish_lcd_display(1, "GAME FINISHED")
+                self.publish_lcd_display(2, "Resetting...")
+                self.get_logger().info("Room Status 'finished'. Resetting to IDLE.")
+                time.sleep(2.0) # Small delay to read LCD
+                self.state = DealerState.IDLE
+                return
 
             if self.room_status == "paused":
                 self.stop_robot()
@@ -468,7 +489,7 @@ class CardDealerCoreNode(Node):
                     self.current_deal_idx += 1
                     return
 
-                # [UPDATED] Lookup by NAME
+                # Lookup by NAME
                 target_deg = self.player_angle_map.get(p_name)
                 
                 if target_deg is None:

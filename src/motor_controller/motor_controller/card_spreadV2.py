@@ -23,11 +23,7 @@ PAUSE_TIME = 0
 # -------------------------
 # GPIO SETUP
 # -------------------------
-try:
-    GPIO.cleanup()
-except:
-    pass
-
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(IN1, GPIO.OUT)
 GPIO.setup(IN2, GPIO.OUT)
