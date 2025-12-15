@@ -24,7 +24,6 @@ This step configures and verifies that your Turtlebot3 is connected and working 
 
  ```bash
  export TURTLEBOT3_MODEL=burger
- sudo chmod 666 /dev/ttyACM1
  ros2 launch turtlebot3_bringup robot.launch.py
  ```
 
