@@ -46,15 +46,17 @@ This step configures and verifies that your Turtlebot3 is connected and working 
 ## How to Build
 1. **Install Source Code**
 ```bash
-  cd <ROS2_workspace>/src
   git clone https://github.com/KomkaninM/CardDealerRobot.git
-  ros2 run turtlebot3_teleop teleop_keyboard
 ```
 2. Build
 ```bash
-  cd <ROS2_workspace>
+  cd CardDealerRobot/
   colcon build --symlink-install
   source install/setup.bash
+```
+3. Run
+```bash
+  ros2 launch launcher dealer_system_launch.py
 ```
 
 ## Github Pull & Update
