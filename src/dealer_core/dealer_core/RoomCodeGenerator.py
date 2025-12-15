@@ -2,14 +2,32 @@ import random
 from typing import Dict, Any
 from pymongo import MongoClient, errors
 
-import os  
-from dotenv import load_dotenv  
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+def load_workspace_env():
+    """
+    Climbs up the directory tree from THIS file to find the nearest .env file.
+    """
+    # Start at the folder containing this script
+    path = Path(__file__).resolve().parent
+
+    # Keep climbing up until we hit the file system root
+    while path != path.parent:
+        env_path = path / ".env"
+        if env_path.exists():
+            load_dotenv(dotenv_path=str(env_path))
+            print(f"[INFO] Loaded .env from: {env_path}")
+            return True
+        path = path.parent
+
+    print("[WARN] No .env file found in any parent directory!")
+    return False
 
 # Load .env file into environment variables
-load_dotenv()
-
+load_workspace_env()
 # ====== CONFIG =======
-
 MONGO_URI       = os.getenv('MONGO_URI')
 DB_NAME         = os.getenv('MONGO_DB_NAME', 'card_dealer_db')
 COLLECTION_NAME = os.getenv('MONGO_COLLECTION_ROOMS', 'rooms')
@@ -48,10 +66,10 @@ def build_minimal_room_document(room_code: str) -> Dict[str, Any]:
         "room_status": "pending",
 
         # These will be set later by website
-        "num_players": None,    # or 0 if you prefer numbers only
+        "num_players": 4,    # or 0 if you prefer numbers only
         "players": [],          # empty list; website can push names later
-        "card_gain": None,      # Card gain each turn (int) – set by website
-        "starting_card": None,  # Starting cards in hand (int) – set by website
+        "card_gain": 1,      # Card gain each turn (int) – set by website
+        "starting_card": 5,  # Starting cards in hand (int) – set by website
     }
     return doc
 
@@ -116,7 +134,7 @@ if __name__ == "__main__":
     new_room = create_unique_room()
     print("New minimal room in MongoDB:")
     print(new_room)
-
+    print(new_room["room_code"])
     netpie_payload = build_netpie_shadow_payload(new_room)
     print("\nNETPIE shadow/data payload:")
     print(netpie_payload)

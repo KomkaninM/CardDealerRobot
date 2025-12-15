@@ -6,10 +6,55 @@ from typing import Any, Dict, Optional
 import rclpy
 from rclpy.node import Node
 
+# Ensure you have built the custom message package first
 from card_dealer_msgs.msg import RoomConfig, Player
 
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
+
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+def load_workspace_env():
+    """
+    Climbs up the directory tree from THIS file to find the nearest .env file.
+    """
+    # Start at the folder containing this script
+    path = Path(__file__).resolve().parent
+
+    # Keep climbing up until we hit the file system root
+    while path != path.parent:
+        env_path = path / ".env"
+        if env_path.exists():
+            load_dotenv(dotenv_path=str(env_path))
+            print(f"[INFO] Loaded .env from: {env_path}")
+            return True
+        path = path.parent
+
+    print("[WARN] No .env file found in any parent directory!")
+    return False
+
+def load_workspace_env():
+    """
+    Climbs up the directory tree from THIS file to find the nearest .env file.
+    """
+    # Start at the folder containing this script
+    path = Path(__file__).resolve().parent
+
+    # Keep climbing up until we hit the file system root
+    while path != path.parent:
+        env_path = path / ".env"
+        if env_path.exists():
+            load_dotenv(dotenv_path=str(env_path))
+            print(f"[INFO] Loaded .env from: {env_path}")
+            return True
+        path = path.parent
+
+    print("[WARN] No .env file found in any parent directory!")
+    return False
+
+
 
 
 def _require_env(name: str) -> str:
@@ -71,17 +116,8 @@ class NetpieRoomConfigNode(Node):
         super().__init__("netpie_room_config_node")
 
         # ---- Load .env ----
-        self.declare_parameter("env_file", "")
-        env_file = self.get_parameter("env_file").get_parameter_value().string_value
-
-        if env_file:
-            load_dotenv(dotenv_path=env_file)
-            self.get_logger().info(f"Loaded .env from: {env_file}")
-        else:
-            default_env = str(Path.cwd() / ".env")
-            load_dotenv(dotenv_path=default_env)
-            self.get_logger().info(f"Loaded .env from: {default_env}")
-
+        load_workspace_env()
+        
         # ---- Read NETPIE config (no hard-coded secrets) ----
         app_id = _require_env("NETPIE_APP_ID")
         key = _require_env("NETPIE_KEY")
@@ -110,7 +146,8 @@ class NetpieRoomConfigNode(Node):
         self.mqtt.on_connect = self.on_connect
         self.mqtt.on_message = self.on_message
         self.mqtt.on_disconnect = self.on_disconnect
-
+        self.get_logger().info("MQTT Node Initialize")
+        self.get_logger().info("Published to: /mqtt/room_config")
         self.get_logger().info(f"Connecting NETPIE MQTT {host}:{port} ...")
         self.mqtt.connect(host, port, keepalive=60)
         self.mqtt.loop_start()
@@ -120,28 +157,29 @@ class NetpieRoomConfigNode(Node):
         self.get_logger().info("Publishing ROS: /mqtt/room_config (card_dealer_msgs/RoomConfig)")
 
     def on_connect(self, client, userdata, flags, rc):
-        self.get_logger().info(f"MQTT connected rc={rc}")
+        # self.get_logger().info(f"MQTT connected rc={rc}")
 
         # Subscribe both sources:
         client.subscribe(self.topic_room_config, qos=1)
         client.subscribe(self.topic_private_sub, qos=1)
 
-        self.get_logger().info(f"Subscribed MQTT: {self.topic_room_config}")
-        self.get_logger().info(f"Subscribed MQTT: {self.topic_private_sub}")
+        # self.get_logger().info(f"Subscribed MQTT: {self.topic_room_config}")
+        # self.get_logger().info(f"Subscribed MQTT: {self.topic_private_sub}")
 
         # Request shadow data once connected
         client.publish(self.topic_shadow_get, payload="", qos=1)
-        self.get_logger().info("Requested shadow data via @shadow/data/get")
+        # self.get_logger().info("Requested shadow data via @shadow/data/get")
 
     def on_disconnect(self, client, userdata, rc):
-        self.get_logger().warn(f"MQTT disconnected rc={rc}")
+        pass
+        # self.get_logger().warn(f"MQTT disconnected rc={rc}")
 
     def on_message(self, client, userdata, msg):
         topic = getattr(msg, "topic", "")
         payload = msg.payload.decode("utf-8", errors="ignore")
 
         # Helpful debug (truncate long payload)
-        self.get_logger().debug(f"MQTT RX topic={topic} payload={payload[:300]}")
+        # self.get_logger().debug(f"MQTT RX topic={topic} payload={payload[:300]}")
 
         try:
             obj = json.loads(payload)
@@ -157,10 +195,10 @@ class NetpieRoomConfigNode(Node):
 
         out = self._build_room_config_msg(rcfg)
         self.pub.publish(out)
-        self.get_logger().info(
-            f"Published /mqtt/room_config from topic={topic} "
-            f"(status={out.room_status}, num_players={out.num_players})"
-        )
+        # self.get_logger().info(
+        #     f"Published /mqtt/room_config from topic={topic} "
+        #     f"(status={out.room_status}, num_players={out.num_players})"
+        # )
 
     def _build_room_config_msg(self, rcfg: Dict[str, Any]) -> RoomConfig:
         out = RoomConfig()
@@ -199,10 +237,13 @@ class NetpieRoomConfigNode(Node):
 def main():
     rclpy.init()
     node = NetpieRoomConfigNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
-
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == "__main__":
     main()

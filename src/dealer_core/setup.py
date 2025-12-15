@@ -13,8 +13,8 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='ubuntu-me-2',
-    maintainer_email='ubuntu-me-2@todo.todo',
+    maintainer='ubuntu',
+    maintainer_email='komkanin.m@gmail.com',
     description='TODO: Package description',
     license='Apache-2.0',
     extras_require={
@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "dealer_core = dealer_core.dealer_core.main:main"
+            'main = dealer_core.main:main',
         ],
     },
 )

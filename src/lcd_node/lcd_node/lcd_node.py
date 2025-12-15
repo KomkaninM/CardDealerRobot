@@ -11,101 +11,25 @@ except Exception:
     LCD_OK = False
 
 
-def fit16(text: str) -> str:
-    return (text[:16]).ljust(16)
-
-
 def load_card_symbols(lcd):
     # 8 custom chars: 0..7
     chars = {
         # ♠ (spade)
-        0: [
-            0b00100,
-            0b01110,
-            0b11111,
-            0b11111,
-            0b01110,
-            0b00100,
-            0b00100,
-            0b01110,
-        ],
+        0: [0b00100,0b01110,0b11111,0b11111,0b01110,0b00100,0b00100,0b01110],
         # ♥ (heart)
-        1: [
-            0b00000,
-            0b01010,
-            0b11111,
-            0b11111,
-            0b11111,
-            0b01110,
-            0b00100,
-            0b00000,
-        ],
+        1: [0b00000,0b01010,0b11111,0b11111,0b11111,0b01110,0b00100,0b00000],
         # ♦ (diamond)
-        2: [
-            0b00100,
-            0b01110,
-            0b11111,
-            0b11111,
-            0b11111,
-            0b01110,
-            0b00100,
-            0b00000,
-        ],
+        2: [0b00100,0b01110,0b11111,0b11111,0b11111,0b01110,0b00100,0b00000],
         # ♣ (club)
-        3: [
-            0b00100,
-            0b01110,
-            0b00100,
-            0b11111,
-            0b11111,
-            0b01110,
-            0b00100,
-            0b01110,
-        ],
+        3: [0b00100,0b01110,0b00100,0b11111,0b11111,0b01110,0b00100,0b01110],
         # ♤ (outline spade)
-        4: [
-            0b00100,
-            0b01110,
-            0b10001,
-            0b10001,
-            0b01010,
-            0b00100,
-            0b00100,
-            0b01110,
-        ],
+        4: [0b00100,0b01110,0b10001,0b10001,0b01010,0b00100,0b00100,0b01110],
         # ♧ (outline club)
-        5: [
-            0b00100,
-            0b01010,
-            0b00100,
-            0b10001,
-            0b10001,
-            0b01010,
-            0b00100,
-            0b01110,
-        ],
+        5: [0b00100,0b01010,0b00100,0b10001,0b10001,0b01010,0b00100,0b01110],
         # ♡ (outline heart)
-        6: [
-            0b00000,
-            0b01010,
-            0b10001,
-            0b10001,
-            0b10001,
-            0b01010,
-            0b00100,
-            0b00000,
-        ],
+        6: [0b00000,0b01010,0b10001,0b10001,0b10001,0b01010,0b00100,0b00000],
         # ♢ (outline diamond)
-        7: [
-            0b00100,
-            0b01010,
-            0b10001,
-            0b10001,
-            0b10001,
-            0b01010,
-            0b00100,
-            0b00000,
-        ],
+        7: [0b00100,0b01010,0b10001,0b10001,0b10001,0b01010,0b00100,0b00000],
     }
 
     for idx, bitmap in chars.items():
@@ -127,9 +51,8 @@ TOKEN_MAP = {
 
 def render_lcd(text: str) -> str:
     """
-    แปลง token เช่น h/ -> chr(1) เพื่อให้ LCD แสดง custom char
-    Escape:
-      - '//' -> '/'
+    Converts tokens like 'h/' -> chr(1).
+    Also handles '//' escape sequence.
     """
     if not text:
         return ""
@@ -145,7 +68,7 @@ def render_lcd(text: str) -> str:
             i += 2
             continue
 
-        # token: 2 chars, เช่น 'h/' 's/' ...
+        # token: 2 chars, e.g. 'h/' 's/'
         if i + 1 < n:
             tok = text[i:i + 2]
             idx = TOKEN_MAP.get(tok)
@@ -179,8 +102,8 @@ class LCDNode(Node):
         self.last_line2 = None
 
         # Subscribe two topics: lcd1 -> row0, lcd2 -> row1
-        self.create_subscription(String, '/lcd1', self.cb_lcd1, 10)
-        self.create_subscription(String, '/lcd2', self.cb_lcd2, 10)
+        self.create_subscription(String, '/lcd/display/line1', self.cb_lcd1, 10)
+        self.create_subscription(String, '/lcd/display/line2', self.cb_lcd2, 10)
 
         if not LCD_OK:
             self.get_logger().warning("LCD library not available")
@@ -202,19 +125,30 @@ class LCDNode(Node):
         # Load custom symbols
         load_card_symbols(self.lcd)
 
-        # Clear and show a short ready screen (optional)
+        # Clear and show a short ready screen
         self.lcd.clear()
         self._write_line(0, "LCD READY")
-        self._write_line(1, "pub /lcd1,/2")
+        self._write_line(1, "Auto-Center Mode")
 
-        self.get_logger().info("LCD Node started (topics: /lcd1, /lcd2)")
+        self.get_logger().info("LCD Node Initialize")
+        self.get_logger().info("Subscribed to: /lcd/display/line1, /lcd/display/line2")
 
     def _write_line(self, row: int, text: str):
         if not self.lcd_ready or self.lcd is None:
             return
-        text = fit16(render_lcd(text))
+        
+        # 1. Render symbols first (e.g. "h/" becomes a single char of length 1)
+        rendered_text = render_lcd(text)
+        
+        # 2. Auto-center to 16 characters
+        # Using .center(16) works correctly because rendered symbols count as length 1
+        final_text = rendered_text.center(16)
+        
+        # 3. Truncate if longer than 16 (just in case)
+        final_text = final_text[:16]
+
         self.lcd.cursor_pos = (row, 0)
-        self.lcd.write_string(text)
+        self.lcd.write_string(final_text)
 
     def _refresh(self):
         # update only changed lines to reduce flicker

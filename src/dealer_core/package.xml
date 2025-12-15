@@ -4,7 +4,7 @@
   <name>dealer_core</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="ubuntu-me-2@todo.todo">ubuntu-me-2</maintainer>
+  <maintainer email="komkanin.m@gmail.com">ubuntu</maintainer>
   <license>Apache-2.0</license>
 
   <test_depend>ament_copyright</test_depend>
@@ -12,12 +12,9 @@
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
-    <exec_depend>rclpy</exec_depend>
-    <exec_depend>python-dotenv</exec_depend>
-    <exec_depend>pymongo</exec_depend>
-    <exec_depend>std_msgs</exec_depend>
-  
-
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>card_dealer_msgs</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

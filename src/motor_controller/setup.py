@@ -23,7 +23,8 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
+        'console_scripts': [ 
+            'card_spreader_node = motor_controller.card_spreadV2:main',
         ],
     },
 )

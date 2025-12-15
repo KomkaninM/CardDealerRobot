@@ -13,10 +13,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='ubuntu-me-2',
-    maintainer_email='ubuntu-me-2@todo.todo',
+    maintainer='ubuntu',
+    maintainer_email='komkanin.m@gmail.com',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     extras_require={
         'test': [
             'pytest',
@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-	    'ir_reader_node = ir_reader.ir_reader_node:main',
+            'angle_detect = ir_reader.ir_reader:main', 
         ],
     },
 )
