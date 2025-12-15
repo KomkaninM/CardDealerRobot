@@ -5,6 +5,7 @@
 - [CardDealerRobot](#carddealerrobot)
   - [Table of Contents](#table-of-contents)
   - [Turtlebot3 Drive Setup](#turtlebot3-drive-setup)
+  - [How to Build](#how-to-build)
   - [Github Pull \& Update](#github-pull--update)
 
 
